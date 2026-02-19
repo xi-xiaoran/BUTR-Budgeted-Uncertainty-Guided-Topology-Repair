@@ -1,115 +1,116 @@
-# BUTR: Budgeted Uncertainty-guided Topology Repair (MICCAI)
+# BUTR: Budgeted Uncertainty-guided Topology Repair
 
-This repository contains the official PyTorch implementation of **BUTR** (**B**udgeted **U**ncertainty-guided **T**opology **R**epair), a **post-hoc refinement** framework for **retinal vessel segmentation**.
-BUTR refines a backbone prediction **only inside a compact region-of-interest (ROI)** selected by (i) pixel-wise uncertainty and (ii) a fast topology/structure violation detector, under an explicit edit budget.
+**BUTR** is a post-hoc refinement framework for thin-structure medical segmentation (e.g., retinal vessels).  
+It performs **ROI-bounded** edits guided by **pixel-wise uncertainty** and a **structure/topology violation map**, so the final prediction is **identical to the backbone outside the ROI**.
 
 <p align="center">
-  <img src="assets/method.png" width="900"/>
+  <img src="assets/method.png" width="920" alt="BUTR overview / pipeline"/>
 </p>
 
 <p align="center">
-  <img src="assets/qualitative.png" width="900"/>
+  <img src="assets/qualitative.png" width="920" alt="Qualitative comparisons"/>
 </p>
-
-> **Figures.** The repository ships with example figures in `assets/`.
-> To use your final paper figures, simply overwrite:
-> - `assets/method.png` (method/framework figure)
-> - `assets/qualitative.png` (qualitative visualization figure)
-
-> **How to export from Overleaf:** open the figure PDF (or the compiled paper), download the figure as PDF, then convert to PNG (e.g., macOS Preview / Windows Photos / ImageMagick). Keep the filenames exactly as above.
 
 ---
 
-## 1. Environment
+## What’s in this repo
 
+- **Backbones**: U-Net (primary), plus additional backbones kept for extensibility.
+- **Methods**:
+  - `Std`: standard segmentation training (e.g., BCE+Dice)
+  - `EDL`: evidential head for uncertainty estimation
+  - `Loss+clDice`, `Loss+TopoPH`, `Loss+DMT`: training-time topology objectives
+  - `Post-Morph`, `Post-Viol`: post-processing baselines
+  - `BUTR-V1/V2`: ROI-constrained repair (V2 uses an additional gate)
+- **Experiments**:
+  - `experiments/exp1.py`: multi-method comparison
+  - `experiments/exp2.py`: ablation (ROI guidance variants)
+  - `experiments/exp3.py`: helper/aggregation utilities
+- **Analysis**:
+  - `analyze_miccai_sens_spec.py`: compute sensitivity/specificity from saved models
+
+> Note: datasets and trained weights are **not** included in this repo.
+
+---
+
+## Quick start
+
+### 1) Environment
 ```bash
-conda create -n butr python=3.10 -y
-conda activate butr
 pip install -r requirements.txt
 ```
 
-Tested with PyTorch >= 2.1.
+### 2) Prepare datasets
+Place datasets under `data/` (or set your dataset root path according to the dataset loader you use).  
+Check `data/` and `experiments/common.py` for expected folder structure / path settings.
 
----
-
-## 2. Data preparation
-
-We use three public fundus benchmarks for **retinal vessel segmentation**:
-
-- **DRIVE**
-- **CHASE\_DB1**
-- **STARE**
-
-Organize the datasets under a single `data_root` directory (any absolute or relative path is fine).
-The dataset builders expect the standard file layout used in this project; if your raw downloads differ, adapt the paths in:
-`topo_repair_pkg/data/{drive,chase,stare}.py`.
-
----
-
-## 3. Running experiments (paper)
-
-### Experiment 1: Multi-method comparison (U-Net)
-Run evaluation for a dataset/method grid and export a summary CSV:
-
+### 3) Run experiments
+All experiment scripts support `--help` for exact arguments:
 ```bash
-python -m experiments.exp1 --data_root <DATA_ROOT> --out_root results/exp1 --datasets drive,chase,stare
-```
-
-### Experiment 2: ROI guidance ablation
-```bash
-python -m experiments.exp2 --data_root <DATA_ROOT> --out_root results/exp2 --datasets drive,chase,stare
-```
-
-### Experiment 3: (Optional) aggregate / report script
-This project includes lightweight aggregation utilities under `experiments/`.
-
----
-
-## 4. Sensitivity / Specificity analysis (MICCAI tables)
-
-If you have saved trained checkpoints under `models/<dataset>/<method>/model.pt` (and `repair.pt` for BUTR),
-you can compute **Sensitivity**/**Specificity** over all splits and export a MICCAI CSV:
-
-```bash
-python analyze_miccai_sens_spec.py --data_root <DATA_ROOT> --models_root models --results_root results --datasets drive,chase,stare
-```
-
-This writes a CSV under `results/` (see the script arguments for the exact output path).
-
----
-
-## 5. Topology/violation detector switch (for ablations)
-
-The topology/structure certifier is **enabled by default**.
-To disable it (e.g., for ablation runs), set:
-
-```bash
-# Linux/macOS
-export TOPO_CERTIFY=0
-
-# Windows PowerShell
-$env:TOPO_CERTIFY="0"
+python experiments/exp1.py --help
+python experiments/exp2.py --help
+python analyze_miccai_sens_spec.py --help
 ```
 
 ---
 
-## 6. Citation
+## ROI violation detector toggle (for ablations)
 
-If you use this code, please cite our paper:
+The violation/structure detector can be toggled via an environment variable:
 
-```bibtex
-@inproceedings{butr2026,
-  title     = {BUTR: Budgeted Uncertainty-guided Topology Repair for Retinal Vessel Segmentation},
-  author    = {Anonymous},
-  booktitle = {MICCAI},
-  year      = {2026}
-}
-```
-
-> Replace the BibTeX with the final camera-ready entry.
+- **Default (enabled):** `TOPO_CERTIFY=1` (or unset)
+- **Disable (for ablation):**
+  - Linux/macOS:
+    ```bash
+    export TOPO_CERTIFY=0
+    ```
+  - PowerShell:
+    ```powershell
+    $env:TOPO_CERTIFY="0"
+    ```
 
 ---
 
-## 7. License
+## Repository layout
 
-This repository is released under the MIT License. See [LICENSE](LICENSE).
+```
+.
+├── assets/                 # README figures (method/qualitative)
+├── backbone/               # segmentation backbones
+├── data/                   # dataset loaders (expects DRIVE / CHASE_DB1 / STARE)
+├── experiments/            # exp1 / exp2 / exp3
+├── methods/                # BUTR + baselines
+│   ├── certify/            # structure/topology certificate & violation map
+│   ├── losses/             # dice, cldice, topoph proxies, dmt proxy, edl
+│   └── postproc/           # morphology / violation-correction postproc
+├── metrics/                # pixel/boundary/skeleton/topology/uncertainty metrics
+├── utils/                  # io, timers, reproducibility helpers
+├── analyze_miccai_sens_spec.py
+└── requirements.txt
+```
+
+---
+
+## Figures in README (how to update)
+
+This README displays two figures if the following files exist:
+
+- `assets/method.png` — method/pipeline overview
+- `assets/qualitative.png` — qualitative comparison / outputs
+
+To update them, simply overwrite these PNGs with your own images **using the same filenames**.
+
+---
+
+## License
+
+See `LICENSE`.
+
+---
+
+## Contact
+
+If you run into issues reproducing results, open a GitHub Issue with:
+- your OS + Python/PyTorch versions
+- the exact command you ran
+- the full error log
