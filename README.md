@@ -19,15 +19,13 @@ It performs **ROI-bounded** edits guided by **pixel-wise uncertainty** and a **s
 - **Methods**:
   - `Std`: standard segmentation training (e.g., BCE+Dice)
   - `EDL`: evidential head for uncertainty estimation
-  - `Loss+clDice`, `Loss+TopoPH`, `Loss+DMT`: training-time topology objectives
+  - `Loss+clDice`, `Loss+TopoPH`, `Loss+DMT`, `Loss+clce`: training-time topology objectives
   - `Post-Morph`, `Post-Viol`: post-processing baselines
   - `BUTR-V1/V2`: ROI-constrained repair (V2 uses an additional gate)
 - **Experiments**:
   - `experiments/exp1.py`: multi-method comparison
   - `experiments/exp2.py`: ablation (ROI guidance variants)
   - `experiments/exp3.py`: helper/aggregation utilities
-- **Analysis**:
-  - `analyze_miccai_sens_spec.py`: compute sensitivity/specificity from saved models
 
 > Note: datasets and trained weights are **not** included in this repo.
 
@@ -85,20 +83,8 @@ The violation/structure detector can be toggled via an environment variable:
 │   └── postproc/           # morphology / violation-correction postproc
 ├── metrics/                # pixel/boundary/skeleton/topology/uncertainty metrics
 ├── utils/                  # io, timers, reproducibility helpers
-├── analyze_miccai_sens_spec.py
 └── requirements.txt
 ```
-
----
-
-## Figures in README (how to update)
-
-This README displays two figures if the following files exist:
-
-- `assets/method.png` — method/pipeline overview
-- `assets/qualitative.png` — qualitative comparison / outputs
-
-To update them, simply overwrite these PNGs with your own images **using the same filenames**.
 
 ---
 
